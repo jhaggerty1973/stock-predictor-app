@@ -11,7 +11,8 @@ from sklearn.model_selection import train_test_split
 def get_stock_data(ticker, period="1mo", interval="1d"):
     stock = yf.Ticker(ticker)
     df = stock.history(period=period, interval=interval)
-    df['Date'] = df.index.date
+    df = df.reset_index()  # Ensure Date is a column, not index
+    df['Date'] = df['Date'].dt.date  # Keep only date part
     return df
 
 def add_technical_indicators(df):
@@ -51,6 +52,7 @@ def train_model(df, features):
     return model, df
 
 # --- Streamlit App ---
+st.set_page_config(page_title="Stock Predictor", page_icon="📈")
 st.title("📈 Stock Movement Predictor with Sentiment")
 
 ticker = st.text_input("Enter Stock Ticker", value="AAPL").upper()
@@ -71,14 +73,14 @@ if st.button("Run Prediction"):
     # Display chart
     st.subheader("Price Chart with SMA")
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x=result_df.index, y=result_df['Close'], name='Close'))
-    fig.add_trace(go.Scatter(x=result_df.index, y=result_df['SMA_7'], name='SMA 7'))
-    fig.add_trace(go.Scatter(x=result_df.index, y=result_df['SMA_14'], name='SMA 14'))
+    fig.add_trace(go.Scatter(x=result_df["Date"], y=result_df['Close'], name='Close'))
+    fig.add_trace(go.Scatter(x=result_df["Date"], y=result_df['SMA_7'], name='SMA 7'))
+    fig.add_trace(go.Scatter(x=result_df["Date"], y=result_df['SMA_14'], name='SMA 14'))
     st.plotly_chart(fig)
 
     # Display predictions
     st.subheader("Predictions (last 5 days)")
-    display_df = result_df[['Close', 'Sentiment', 'Price_Up', 'Prediction']].tail(5)
+    display_df = result_df[['Date', 'Close', 'Sentiment', 'Price_Up', 'Prediction']].tail(5)
     display_df['Signal'] = display_df['Prediction'].map({1: "📈 BUY", 0: "⚠️ HOLD"})
     st.dataframe(display_df)
 
